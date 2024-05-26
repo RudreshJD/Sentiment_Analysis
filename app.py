@@ -1,9 +1,8 @@
 from flask import Flask, render_template, request
 from textblob import TextBlob
 import pandas as pd
-import altair as alt
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import matplotlib.pyplot as plt
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import io
 import base64
 
@@ -39,7 +38,7 @@ def index():
             sentiment = TextBlob(raw_text).sentiment
             result_df = convert_to_df(sentiment)
 
-            # Generate Matplotlib plot
+            # Generate Matplotlib plot for sentiment analysis
             img = io.BytesIO()
             result_df.plot(kind='bar', x='metric', y='value', color=['blue', 'orange'])
             plt.title('Sentiment Analysis')
@@ -48,12 +47,32 @@ def index():
             plt.savefig(img, format='png')
             img.seek(0)
             plot_url = base64.b64encode(img.getvalue()).decode()
+            plt.close()
 
             token_sentiments = analyze_token_sentiment(raw_text)
+            pos_count = len(token_sentiments['positives'])
+            neg_count = len(token_sentiments['negatives'])
+            neu_count = len(token_sentiments['neutral'])
+
+            # Generate Matplotlib plot for token sentiment distribution
+            token_img = io.BytesIO()
+            token_df = pd.DataFrame({
+                'Sentiment': ['Positive', 'Negative', 'Neutral'],
+                'Count': [pos_count, neg_count, neu_count]
+            })
+            token_df.plot(kind='bar', x='Sentiment', y='Count', color=['green', 'red', 'gray'])
+            plt.title('Token Sentiment Distribution')
+            plt.xlabel('Sentiment')
+            plt.ylabel('Count')
+            plt.savefig(token_img, format='png')
+            token_img.seek(0)
+            token_plot_url = base64.b64encode(token_img.getvalue()).decode()
+            plt.close()
 
             return render_template('result.html', 
                                    sentiment=sentiment, 
                                    plot_url=plot_url,
+                                   token_plot_url=token_plot_url,
                                    token_sentiments=token_sentiments)
     return render_template('index.html')
 
